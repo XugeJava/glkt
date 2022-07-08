@@ -19,4 +19,8 @@ public interface MenuService extends IService<Menu> {
   List<MenuVo> findMenuInfo();
 
   List<Menu> findMenuOneInfo();
+
+  void syncMenu();
+
+  void removeMenu();
 }
