@@ -3,6 +3,7 @@ package com.xuge.ggkt.vod.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.xuge.model.vod.Course;
 import com.xuge.vo.vod.CoursePublishVo;
+import com.xuge.vo.vod.CourseVo;
 
 /**
  * <p>
@@ -15,4 +16,6 @@ import com.xuge.vo.vod.CoursePublishVo;
 public interface CourseMapper extends BaseMapper<Course> {
 
   CoursePublishVo selectCoursePublishVoById(Long id);
+
+  CourseVo selectCourseVoById(Long id);
 }

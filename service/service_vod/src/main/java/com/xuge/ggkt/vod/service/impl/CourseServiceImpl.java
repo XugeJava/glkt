@@ -10,9 +10,7 @@ import com.xuge.model.vod.Course;
 import com.xuge.model.vod.CourseDescription;
 import com.xuge.model.vod.Subject;
 import com.xuge.model.vod.Teacher;
-import com.xuge.vo.vod.CourseFormVo;
-import com.xuge.vo.vod.CoursePublishVo;
-import com.xuge.vo.vod.CourseQueryVo;
+import com.xuge.vo.vod.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -177,6 +175,93 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
     //根据课程id删除课程
     baseMapper.deleteById(id);
 
+  }
+
+  //课程列表
+  @Override
+  public Map<String,Object> findPage(Page<Course> pageParam, CourseQueryVo courseQueryVo) {
+    //获取条件值
+    String title = courseQueryVo.getTitle();//名称
+    Long subjectId = courseQueryVo.getSubjectId();//二级分类
+    Long subjectParentId = courseQueryVo.getSubjectParentId();//一级分类
+    Long teacherId = courseQueryVo.getTeacherId();//讲师
+    //封装条件
+    QueryWrapper<Course> wrapper = new QueryWrapper<>();
+    if(!StringUtils.isEmpty(title)) {
+      wrapper.like("title",title);
+    }
+    if(!StringUtils.isEmpty(subjectId)) {
+      wrapper.eq("subject_id",subjectId);
+    }
+    if(!StringUtils.isEmpty(subjectParentId)) {
+      wrapper.eq("subject_parent_id",subjectParentId);
+    }
+    if(!StringUtils.isEmpty(teacherId)) {
+      wrapper.eq("teacher_id",teacherId);
+    }
+    //调用方法查询
+    Page<Course> pages = baseMapper.selectPage(pageParam, wrapper);
+
+    long totalCount = pages.getTotal();//总记录数
+    long totalPage = pages.getPages();//总页数
+    long currentPage = pages.getCurrent();//当前页
+    long size = pages.getSize();//每页记录数
+    //每页数据集合
+    List<Course> records = pages.getRecords();
+    records.stream().forEach(item -> {
+      this.getTeacherOrSubjectName(item);
+    });
+
+    Map<String,Object> map = new HashMap<>();
+    map.put("totalCount",totalCount);
+    map.put("totalPage",totalPage);
+    map.put("records",records);
+
+    return map;
+  }
+
+  //获取讲师和分类名称
+  private Course getTeacherOrSubjectName(Course course) {
+    Teacher teacher = teacherService.getById(course.getTeacherId());
+    if(teacher != null) {
+      course.getParam().put("teacherName",teacher.getName());
+    }
+
+    Subject subjectOne = subjectService.getById(course.getSubjectParentId());
+    if(subjectOne != null) {
+      course.getParam().put("subjectParentTitle",subjectOne.getTitle());
+    }
+    Subject subjectTwo = subjectService.getById(course.getSubjectId());
+    if(subjectTwo != null) {
+      course.getParam().put("subjectTitle",subjectTwo.getTitle());
+    }
+    return course;
+  }
+
+  //根据id查询课程
+  @Override
+  public Map<String, Object> getInfoById(Long id) {
+    //更新流量量
+    Course course = baseMapper.selectById(id);
+    course.setViewCount(course.getViewCount() + 1);
+    baseMapper.updateById(course);
+
+    Map<String, Object> map = new HashMap<>();
+    CourseVo courseVo = baseMapper.selectCourseVoById(id);
+    List<ChapterVo> chapterVoList = chapterService.getNestedTreeList(id);
+    CourseDescription courseDescription = courseDescriptionService.getById(id);
+    Teacher teacher = teacherService.getById(course.getTeacherId());
+
+    //TODO后续完善
+    Boolean isBuy = false;
+
+    map.put("courseVo", courseVo);
+    map.put("chapterVoList", chapterVoList);
+    map.put("description", null != courseDescription ?
+            courseDescription.getDescription() : "");
+    map.put("teacher", teacher);
+    map.put("isBuy", isBuy);//是否购买
+    return map;
   }
 
   //根据这些id获取对饮名称
